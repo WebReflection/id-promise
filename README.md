@@ -4,7 +4,7 @@
 
 The goal of this module is to hold on the very first promise that asks for a specific task, resolved once for all concurrent promises that meanwhile asked for that very same task during its resolution time.
 
-### Example
+## In a nutshell
 
 In the following example, after the first `samePromise()`, all other `samePromise()` invokes will simply hold until the first invoke has been resolved, granting that for 300 ms, dictated in the following example by `setTimeout`, no extra timer will be set, and `++samePromiseCalls` won't be incremented more than once.
 
@@ -54,13 +54,13 @@ In _workers_, each _uunique id_ would pass through _master_ to understand if oth
 The task is then eventually executed within the single _worker_ and, once resolved, propagated to every other possible worker that meanwhile asked for the same task.
 
 
-### Caveats
+## Caveats
 
 This module has been created to solve some very specific use case and it's important to understand where it easily fails.
 
 There are 3 kinds of caveats to consider with this module:
 
-  * **name clashes**, so that weak unique identifiers will easily cause troubles. Try to use your project/module namespace as prefix, plus the functionality, plus any other static information that summed to the previous details would make the operation really unique (i.e. a full resolved file path)
+  * **name clashes**, so that weak unique identifiers will easily cause troubles. Try to use your project/module namespace as prefix, plus the functionality, plus any other static information that summed to the previous details would make the operation really unique (i.e. a fully resolved file path)
   * **serialization**, so that you cannot resolve values that cannot be serialized and passed around workers, and you should rather stick with _JSON_ compatible values only.
   * **different parameters**, so that if a promise is cached but the next call internally refers to different values, the result might be unexpected
 
@@ -88,7 +88,7 @@ Above concurrent `writeOnce(where, what)` invokes uses the same _id_ with differ
 The rule of thumbs here is that _First Come, First Serve_, so specifically for writing files this module might be not the solution.
 
 
-### Use cases
+## Use cases
 
   * expensive operations that don't need to be performed frequently, including recursive asynchronous folders crawling or scanning
   * expensive file operations such as compression, archive zipping, archive extraction, and so on and so forth, where the source path is unique and operation would grant always the same outcome
