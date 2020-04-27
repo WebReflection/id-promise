@@ -1,6 +1,6 @@
 {
   "name": "id-promise",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "A cluster friendly, identity based, Promise resolver",
   "main": "./cjs/index.js",
   "scripts": {
