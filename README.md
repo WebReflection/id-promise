@@ -9,6 +9,9 @@ The goal of this module is to hold on the very first promise that asks for a spe
 In the following example, after the first `samePromise()`, all other `samePromise()` invokes will simply hold until the first invoke has been resolved, granting that for 300 ms, dictated in the following example by `setTimeout`, no extra timer will be set, and `++samePromiseCalls` won't be incremented more than once.
 
 ```js
+import idPromise from 'id-promise';
+// const idPromise = require('id-promise');
+
 let samePromiseCalls = 0;
 const samePromise = () => idPromise(
   'some-unique-id:samePromise',
@@ -31,6 +34,9 @@ If the callback is executed within a _forked_ worker, it will put on hold the sa
 This is specially useful when a single _fork_ would need to perform a potentially very expensive operation, either DB or file system related, but it shouldn't perform such operation more than once, as both DB and file system are shared across all workers.
 
 ```js
+import idPromise from 'id-promise';
+// const idPromise = require('id-promise');
+
 const optimizePath = path => idPromise(
   // ⚠ use strong identifiers, not just path!
   `my-project:optimizePath:${path}`,
@@ -67,6 +73,9 @@ There are 3 kinds of caveats to consider with this module:
 While the first caveat is quite easy to understand, the last one is subtle:
 
 ```js
+import idPromise from 'id-promise';
+// const idPromise = require('id-promise');
+
 const writeOnce = (where, what) => idPromise(
   `my-project:writeOnce:${where}`,
   (resolve, reject) => {
