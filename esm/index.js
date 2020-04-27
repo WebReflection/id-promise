@@ -17,8 +17,8 @@
  */
 import cluster from 'cluster';
 
-const {reject} = Promise;
 const {isMaster} = cluster;
+const reject = Promise.reject.bind(Promise);
 
 const CHANNEL = "\x01I'd promise\x01";
 const EXECUTE = 'execute';
@@ -27,6 +27,12 @@ const RESOLVE = 'resolve';
 const VERIFY = new RegExp(`^${CHANNEL}:`);
 
 const cache = new Map;
+
+const getError = error => typeof error == 'object' ?
+  {message: error.message, stack: error.stack} :
+  /* istanbul ignore next */
+  String(error)
+;
 
 const resolvable = () => {
   let $, _;
@@ -40,7 +46,7 @@ const resolvable = () => {
 };
 
 if (isMaster) {
-  const clusters = new Map;
+  const clusters = new Set;
   const onMessage = message => {
     /* istanbul ignore else */
     if (typeof message === 'object') {
@@ -50,24 +56,17 @@ if (isMaster) {
         const {workers} = cluster;
         if (action === EXECUTE) {
           if (!clusters.has(uid)) {
-            clusters.set(uid, resolvable());
+            clusters.add(uid);
             workers[worker].send({id: uid, action});
           }
         }
         else {
           const resolved = action === RESOLVE;
-          const key = resolved ? 'result' : /* istanbul ignore next */ 'error';
-          const value = resolved ? result : /* istanbul ignore next */ error;
-          const promise = clusters.get(uid);
+          const key = resolved ? 'result' : 'error';
+          const value = resolved ? result : error;
           clusters.delete(uid);
-          /* istanbul ignore else */
-          if (resolved)
-            promise.$(value);
-          else
-            promise._(value);
           for (const id in workers) {
-            /* istanbul ignore else */
-            if (id !== worker)
+            if (id != worker)
               workers[id].send({id: uid, [key]: value, action});
           }
         }
@@ -87,7 +86,6 @@ const set = (id, callback, promise) => {
         cache.delete(id);
         return result;
       },
-      /* istanbul ignore next */
       error => {
         cache.delete(id);
         return reject(error);
@@ -105,11 +103,10 @@ const set = (id, callback, promise) => {
           process.send({id, worker, result, action: RESOLVE});
         return result;
       },
-      /* istanbul ignore next */
       error => {
         cache.delete(id);
         if (main)
-          process.send({id, worker, error, action: REJECT});
+          process.send({id, worker, error: getError(error), action: REJECT});
         return reject(error);
       }
     ));
@@ -128,7 +125,6 @@ const set = (id, callback, promise) => {
             case RESOLVE:
               $(result);
               break;
-            /* istanbul ignore next */
             case REJECT:
               _(error);
               break;
