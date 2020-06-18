@@ -16,11 +16,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 import cluster from 'cluster';
+import {pid, ppid} from 'process';
 
 const {isMaster} = cluster;
 const reject = Promise.reject.bind(Promise);
 
-const CHANNEL = "\x01I'd promise\x01";
+const CHANNEL = `\x01I'd promise ${isMaster ? pid : ppid}\x01`;
 const EXECUTE = 'execute';
 const REJECT = 'reject';
 const RESOLVE = 'resolve';

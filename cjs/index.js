@@ -17,11 +17,12 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 const cluster = (m => m.__esModule ? /* istanbul ignore next */ m.default : /* istanbul ignore next */ m)(require('cluster'));
+const {pid, ppid} = require('process');
 
 const {isMaster} = cluster;
 const reject = Promise.reject.bind(Promise);
 
-const CHANNEL = "\x01I'd promise\x01";
+const CHANNEL = `\x01I'd promise ${isMaster ? pid : ppid}\x01`;
 const EXECUTE = 'execute';
 const REJECT = 'reject';
 const RESOLVE = 'resolve';
