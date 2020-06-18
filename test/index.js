@@ -41,7 +41,7 @@ else {
   samePromise().then(
     result => {
       console.log('worker', result);
-      console.assert(result === 1, 'master works');
+      console.assert(result === 1, 'worker works');
     }
   );
   rejectingPromise().catch(error => {
