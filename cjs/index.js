@@ -17,15 +17,15 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 const cluster = (m => m.__esModule ? /* istanbul ignore next */ m.default : /* istanbul ignore next */ m)(require('cluster'));
+const {randomBytes} = require('crypto');
 
 const {isMaster} = cluster;
 const reject = Promise.reject.bind(Promise);
 
-const CHANNEL = "\x01I'd promise\x01";
+const BOOTSTRAP = "\x01I'd promise\x01";
 const EXECUTE = 'execute';
 const REJECT = 'reject';
 const RESOLVE = 'resolve';
-const VERIFY = new RegExp(`^${CHANNEL}:`);
 
 const cache = new Map;
 
@@ -46,14 +46,18 @@ const resolvable = () => {
   return promise;
 };
 
+let CHANNEL;
+
 if (isMaster) {
+  const channel = '\x01' + randomBytes(16).toString('hex');
+  const verify = new RegExp(`^${channel}:`);
   const clusters = new Set;
   const onMessage = message => {
     /* istanbul ignore else */
     if (typeof message === 'object') {
       const {id: uid, worker, action, error, result} = message;
       /* istanbul ignore else */
-      if (typeof uid === 'string' && VERIFY.test(uid)) {
+      if (typeof uid === 'string' && verify.test(uid)) {
         const {workers} = cluster;
         if (action === EXECUTE) {
           if (!clusters.has(uid)) {
@@ -74,8 +78,21 @@ if (isMaster) {
       }
     }
   };
+  CHANNEL = Promise.resolve(channel);
   cluster.on('fork', worker => {
     worker.on('message', onMessage);
+    worker.send({[BOOTSTRAP]: channel});
+  });
+}
+else {
+  CHANNEL = new Promise(res => {
+    process.on('message', function channel(message) {
+      /* istanbul ignore else */
+      if (BOOTSTRAP in message) {
+        process.removeListener('message', channel);
+        res(message[BOOTSTRAP]);
+      }
+    });
   });
 }
 
@@ -138,7 +155,7 @@ const set = (id, callback, promise) => {
   return promise;
 };
 
-module.exports = (id, callback) => {
-  id = `${CHANNEL}:${id}`;
-  return cache.get(id) || set(id, callback, resolvable());
-};
+module.exports = (id, callback) => CHANNEL.then(
+  channel => cache.get(`${channel}:${id}`) ||
+  set(`${channel}:${id}`, callback, resolvable())
+);
