@@ -47,7 +47,14 @@ const resolvable = () => {
 };
 
 if (isMaster) {
-  const clusters = new Set;
+  const clusters = new Map;
+  const send = (workers, worker, uid, message) => {
+    clusters.delete(uid);
+    for (const id in workers) {
+      if (id != worker)
+        workers[id].send(message);
+    }
+  };
   const onMessage = message => {
     /* istanbul ignore else */
     if (typeof message === 'object') {
@@ -57,7 +64,7 @@ if (isMaster) {
         const {workers} = cluster;
         if (action === EXECUTE) {
           if (!clusters.has(uid)) {
-            clusters.add(uid);
+            clusters.set(uid, worker);
             workers[worker].send({id: uid, action});
           }
         }
@@ -65,18 +72,24 @@ if (isMaster) {
           const resolved = action === RESOLVE;
           const key = resolved ? 'result' : 'error';
           const value = resolved ? result : error;
-          clusters.delete(uid);
-          for (const id in workers) {
-            if (id != worker)
-              workers[id].send({id: uid, [key]: value, action});
-          }
+          send(workers, worker, uid, {id: uid, [key]: value, action});
         }
       }
     }
   };
-  cluster.on('fork', worker => {
-    worker.on('message', onMessage);
-  });
+  cluster
+    .on('fork', worker => {
+      worker.on('message', onMessage);
+    })
+    .on('exit', (worker, code) => {
+      /* istanbul ignore next */
+      clusters.forEach((id, uid) => {
+        if (id == worker.id) {
+          const error = `id ${uid.slice(CHANNEL.length + 1)} failed with code ${code}`;
+          send(cluster.workers, id, uid, {id: uid, error, action: REJECT});
+        }
+      });
+    });
 }
 
 const set = (id, callback, promise) => {
